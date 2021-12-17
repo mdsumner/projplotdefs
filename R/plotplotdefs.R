@@ -22,6 +22,7 @@ COLOR_GRAT = '#888888'
 defs <- jsonlite::read_json("https://raw.githubusercontent.com/OSGeo/PROJ/master/docs/plot/plotdefs.json")
 
 plot_def <- function(x) {
+  sf::sf_use_s2(FALSE)
   map <- switch(toupper(sprintf("%s_%s", x$type, x$res)),
                     POLY_LOW = polylow,
                     POLY_MED = polymed,
@@ -53,13 +54,24 @@ pmap <-  sf::st_transform(map, x$projstring)
                            lat = seq(x$latmin, x$latmax, by = GRATICULE_WIDTH))
 
   plot(grat, col = NA)
-  if (x$type == "poly")  plot(pmap, col = COLOR_LAND)
-  if (x$type == "line")  plot(pmap, col = COLOR_COAST)
+  if (x$type == "poly")  plot(pmap, col = COLOR_LAND, add = TRUE)
+  if (x$type == "line")  plot(pmap, col = COLOR_COAST, add = TRUE)
   plot(grat, add = TRUE, col = COLOR_GRAT)
-  title(sub = x$projstring)
+  title(x$projstring)
 }
 
-for (i in seq_along(defs)[-c(1:18)]) {
-  plot_def(defs[[i]])
-  scan("", 1)
+library(basf)
+
+par(mar = rep(0, 4))
+for (i in seq_along(defs)) {
+  filename <- file.path("images", defs[[i]]$filename)
+  png(filename)
+  aplot <- try(plot_def(defs[[i]]))
+  dev.off()
+  if (inherits(aplot, "try-error")) {
+    unlink(filename)
+  }
+
 }
+
+## system("mogrify -monitor -colorspace Gray images/*.png")
